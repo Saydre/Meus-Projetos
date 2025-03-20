@@ -1,0 +1,94 @@
+  // Bibliotecas ------------------------------------------
+#include <WiFi.h>
+#include <IOXhop_FirebaseESP32.h>
+#include <ArduinoJson.h>
+ 
+  //Sensor de Umidade de Solo -----------------------------
+const int sensorPin = 34; // Pino do sensor de umidade
+const int ledPin = 33;    // Pino do LED (ou outro indicador)
+const int threshold = 3000; // Limite para ativação do LED
+ 
+  // Firebase -- ------------------------------------------
+#define FIREBASE_HOST "https://daagt-c50f2-default-rtdb.firebaseio.com/"
+#define FIREBASE_AUTH "2pngAZevsmtf6DrwehzSXUWjvTX6sZyV5ydl2NQ0"
+ 
+  // Wi-Fi ------------------------------------------------
+#define ssid     ""
+#define password ""
+ 
+ 
+ 
+void setup() {
+  pinMode(sensorPin, INPUT);
+  pinMode(ledPin, OUTPUT);
+  Serial.begin(115200);
+ 
+  //Connecting to a WiFi network
+  Serial.println();
+  Serial.println();
+  Serial.println("--------------------------- WIFI CONNECTION ----------------------------");
+  Serial.println();
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
+ 
+  WiFi.begin(ssid, password);
+ 
+  while (WiFi.status() != WL_CONNECTED) {
+      delay(5000);
+      Serial.print(".");
+  }
+ 
+  Serial.println("");
+  Serial.println("WiFi connected.");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+  Serial.println();
+  Serial.println("-------------------------- FIREBASE CONNECTION -------------------------");
+  Firebase.begin(FIREBASE_HOST, FIREBASE_AUTH);
+   
+  if (Firebase.failed()) {
+    Serial.print("Falha na conexão com o Firebase. Código de erro: ");
+    Serial.println(Firebase.error());
+  } else {
+    Serial.println();
+    Serial.println("Conexão com o Firebase bem-sucedida...");
+    Serial.println();
+  }
+  Serial.println("----------------- TEMPERATURE AMD HUMIDITY INFORMATION -----------------");
+  Serial.println();
+}
+ 
+ 
+void loop() {
+  int sensorValue = analogRead(sensorPin);
+ 
+    // Controla o LED baseado no valor do sensor
+  if (sensorValue > threshold) {
+    digitalWrite(ledPin, HIGH);
+  } else {
+    digitalWrite(ledPin, LOW);
+  }
+  delay(3000);
+ 
+    // Realizar a leitura do sensor
+  float humid = analogRead(sensorPin);
+ 
+    // Verifica se o sensor está fornecendo leituras zero e exibe um aviso
+  if (sensorValue == 0) {
+    Serial.println("Aviso: Nenhuma informação válida do sensor!");
+    delay(2000);
+    return;
+  }
+ 
+  Serial.print("Humidity: ");
+  Serial.print(humid);
+  Serial.print(" % ");
+ 
+  Serial.println();
+ 
+  String data = "{\"humidity\": " + String(humid) + ", \"timestamp\": \"" "\"}";
+ 
+  Firebase.pushString("/data", data);
+ 
+  delay(3000);
+}
